@@ -8,7 +8,7 @@
 
 # --- File Name: variation_consistency_networks.py
 # --- Creation Date: 03-02-2020
-# --- Last Modified: Thu 05 Mar 2020 05:00:28 AEDT
+# --- Last Modified: Fri 13 Mar 2020 17:37:37 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -29,13 +29,8 @@ from training.networks_stylegan2 import get_weight, dense_layer, conv2d_layer
 from training.networks_stylegan2 import apply_bias_act, naive_upsample_2d
 from training.networks_stylegan2 import naive_downsample_2d, modulated_conv2d_layer
 from training.networks_stylegan2 import minibatch_stddev_layer
-from training.spatial_biased_extended_networks import torgb, get_conditional_modifier
-from training.spatial_biased_extended_networks import get_att_heat
-from training.spatial_biased_modular_networks import split_module_names, build_D_layers
-from training.spatial_biased_modular_networks import build_C_global_layers
-from training.spatial_biased_modular_networks import build_local_heat_layers, build_local_hfeat_layers
-from training.spatial_biased_modular_networks import build_noise_layer, build_conv_layer
-from stn.stn import spatial_transformer_network as transformer
+
+LATENT_MODULES = ['D_global', 'C_nocond_global', 'C_global']
 
 
 #----------------------------------------------------------------------------
@@ -232,32 +227,12 @@ def G_synthesis_vc_modular(
         elif k.startswith('C_nocond_global'):
             # e.g. {'C_nocond_global': 2}
             x = build_C_global_nocond_layers(x,
-                                      name=k,
-                                      n_latents=size_ls[scope_idx],
-                                      start_idx=start_idx,
-                                      scope_idx=scope_idx,
-                                      fmaps=nf(scope_idx),
-                                      **subkwargs)
-            start_idx += size_ls[scope_idx]
-        elif k.startswith('C_local_heat'):
-            # e.g. {'C_local_heat': 4}
-            x = build_local_heat_layers(x,
-                                        name=k,
-                                        n_latents=size_ls[scope_idx],
-                                        start_idx=start_idx,
-                                        scope_idx=scope_idx,
-                                        fmaps=nf(scope_idx),
-                                        **subkwargs)
-            start_idx += size_ls[scope_idx]
-        elif k.startswith('C_local_hfeat'):
-            # e.g. {'C_local_hfeat_size': 4}
-            x = build_local_hfeat_layers(x,
-                                         name=k,
-                                         n_latents=size_ls[scope_idx],
-                                         start_idx=start_idx,
-                                         scope_idx=scope_idx,
-                                         fmaps=nf(scope_idx),
-                                         **subkwargs)
+                                             name=k,
+                                             n_latents=size_ls[scope_idx],
+                                             start_idx=start_idx,
+                                             scope_idx=scope_idx,
+                                             fmaps=nf(scope_idx),
+                                             **subkwargs)
             start_idx += size_ls[scope_idx]
         elif k.startswith('Noise'):
             # e.g. {'Noise': 1}
@@ -401,30 +376,39 @@ def vc_head(
     assert x.dtype == tf.as_dtype(dtype)
     return x
 
+
 #----------------------------------------------------------------------------
 # StyleGAN2 discriminator simpler version.
 
+
 def D_stylegan2_simple(
-    images_in,                          # First input: Images [minibatch, channel, height, width].
-    labels_in,                          # Second input: Labels [minibatch, label_size].
-    num_channels        = 3,            # Number of input color channels. Overridden based on dataset.
-    resolution          = 1024,         # Input resolution. Overridden based on dataset.
-    label_size          = 0,            # Dimensionality of the labels, 0 if no labels. Overridden based on dataset.
-    fmap_base           = 16 << 10,     # Overall multiplier for the number of feature maps.
-    fmap_decay          = 1.0,          # log2 feature map reduction when doubling the resolution.
-    fmap_min            = 1,            # Minimum number of feature maps in any layer.
-    fmap_max            = 512,          # Maximum number of feature maps in any layer.
-    architecture        = 'resnet',     # Architecture: 'orig', 'skip', 'resnet'.
-    nonlinearity        = 'lrelu',      # Activation function: 'relu', 'lrelu', etc.
-    mbstd_group_size    = 4,            # Group size for the minibatch standard deviation layer, 0 = disable.
-    mbstd_num_features  = 1,            # Number of features for the minibatch standard deviation layer.
-    dtype               = 'float32',    # Data type to use for activations and outputs.
-    resample_kernel     = [1,3,3,1],    # Low-pass filter to apply when resampling activations. None = no filtering.
-    **_kwargs):                         # Ignore unrecognized keyword args.
+        images_in,  # First input: Images [minibatch, channel, height, width].
+        labels_in,  # Second input: Labels [minibatch, label_size].
+        num_channels=3,  # Number of input color channels. Overridden based on dataset.
+        resolution=1024,  # Input resolution. Overridden based on dataset.
+        label_size=0,  # Dimensionality of the labels, 0 if no labels. Overridden based on dataset.
+        fmap_base=16 <<
+        10,  # Overall multiplier for the number of feature maps.
+        fmap_decay=1.0,  # log2 feature map reduction when doubling the resolution.
+        fmap_min=1,  # Minimum number of feature maps in any layer.
+        fmap_max=512,  # Maximum number of feature maps in any layer.
+        architecture='resnet',  # Architecture: 'orig', 'skip', 'resnet'.
+        nonlinearity='lrelu',  # Activation function: 'relu', 'lrelu', etc.
+        mbstd_group_size=4,  # Group size for the minibatch standard deviation layer, 0 = disable.
+        mbstd_num_features=1,  # Number of features for the minibatch standard deviation layer.
+        dtype='float32',  # Data type to use for activations and outputs.
+        resample_kernel=[
+            1, 3, 3, 1
+        ],  # Low-pass filter to apply when resampling activations. None = no filtering.
+        **_kwargs):  # Ignore unrecognized keyword args.
 
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
-    def nf(stage): return np.clip(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_min, fmap_max)
+
+    def nf(stage):
+        return np.clip(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_min,
+                       fmap_max)
+
     assert architecture in ['orig', 'skip', 'resnet']
     act = nonlinearity
 
@@ -434,21 +418,33 @@ def D_stylegan2_simple(
     labels_in = tf.cast(labels_in, dtype)
 
     # Building blocks for main layers.
-    def fromrgb(x, y, res): # res = 2..resolution_log2
+    def fromrgb(x, y, res):  # res = 2..resolution_log2
         with tf.variable_scope('FromRGB'):
-            t = apply_bias_act(conv2d_layer(y, fmaps=nf(res-1), kernel=1), act=act)
+            t = apply_bias_act(conv2d_layer(y, fmaps=nf(res - 1), kernel=1),
+                               act=act)
             return t if x is None else x + t
-    def block(x, res): # res = 2..resolution_log2
+
+    def block(x, res):  # res = 2..resolution_log2
         t = x
         # with tf.variable_scope('Conv0'):
-            # x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-1), kernel=3), act=act)
+        # x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-1), kernel=3), act=act)
         with tf.variable_scope('Conv1_down'):
-            x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-2), kernel=3, down=True, resample_kernel=resample_kernel), act=act)
+            x = apply_bias_act(conv2d_layer(x,
+                                            fmaps=nf(res - 2),
+                                            kernel=3,
+                                            down=True,
+                                            resample_kernel=resample_kernel),
+                               act=act)
         if architecture == 'resnet':
             with tf.variable_scope('Skip'):
-                t = conv2d_layer(t, fmaps=nf(res-2), kernel=1, down=True, resample_kernel=resample_kernel)
+                t = conv2d_layer(t,
+                                 fmaps=nf(res - 2),
+                                 kernel=1,
+                                 down=True,
+                                 resample_kernel=resample_kernel)
                 x = (x + t) * (1 / np.sqrt(2))
         return x
+
     def downsample(y):
         with tf.variable_scope('Downsample'):
             return downsample_2d(y, k=resample_kernel)
@@ -470,7 +466,8 @@ def D_stylegan2_simple(
             x = fromrgb(x, y, 2)
         if mbstd_group_size > 1:
             with tf.variable_scope('MinibatchStddev'):
-                x = minibatch_stddev_layer(x, mbstd_group_size, mbstd_num_features)
+                x = minibatch_stddev_layer(x, mbstd_group_size,
+                                           mbstd_num_features)
         with tf.variable_scope('Conv'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(1), kernel=3), act=act)
         with tf.variable_scope('Dense0'):
@@ -489,6 +486,121 @@ def D_stylegan2_simple(
     return scores_out
 
 
+def torgb(x, y, num_channels):
+    with tf.variable_scope('ToRGB'):
+        t = apply_bias_act(conv2d_layer(x, fmaps=num_channels, kernel=1))
+        return t if y is None else y + t
+
+
+def split_module_names(module_list, **kwargs):
+    '''
+    Split the input module_list.
+    e.g. ['C_global-2', 'Conv-id-1',
+            'Conv-up-1', 'Conv-up-1',
+            'Noise-1', 'Conv-id-1']
+    We assume all content_latents are in the begining.
+    '''
+    key_ls = []
+    size_ls = []
+    count_dlatent_size = 0
+    n_content = 0
+    # print('In split:', module_list)
+    for module in module_list:
+        m_name = module.split('-')[0]
+        m_key = '-'.join(module.split('-')[:-1])  # exclude size
+        size = int(module.split('-')[-1])
+        if size > 0:
+            if m_name in LATENT_MODULES:
+                count_dlatent_size += size
+            key_ls.append(m_key)
+            size_ls.append(size)
+        # if m_name in ['D_global', 'C_global']:
+        if m_name in ['D_global']:
+            n_content += size
+    return key_ls, size_ls, count_dlatent_size, n_content
+
+
+def build_D_layers(x,
+                   name,
+                   n_latents,
+                   start_idx,
+                   scope_idx,
+                   single_const,
+                   dlatents_withl_in,
+                   act,
+                   fused_modconv,
+                   fmaps=128,
+                   **kwargs):
+    '''
+    Build discrete latent layers including label and D_global layers.
+    '''
+    with tf.variable_scope(name + '-' + str(scope_idx)):
+        if single_const:
+            x = apply_bias_act(modulated_conv2d_layer(
+                x,
+                dlatents_withl_in[:, start_idx:start_idx + n_latents],
+                fmaps=fmaps,
+                kernel=3,
+                up=False,
+                fused_modconv=fused_modconv),
+                               act=act)
+        else:
+            # soft version
+            # x_softmax = tf.nn.softmax(
+            # dlatents_withl_in[:, start_idx:start_idx + n_latents], axis=1)
+            # x_softmax = tf.reshape(
+            # x_softmax, [tf.shape(x_softmax)[0], n_latents, 1, 1, 1])
+            # x = tf.reduce_sum(x * x_softmax, axis=1)
+            # print('x.shape:', x.shape.as_list())
+
+            # hard version
+            x_indices = tf.argmax(dlatents_withl_in[:, start_idx:start_idx +
+                                                    n_latents],
+                                  axis=1)
+            print('x_indices.shape:', x_indices.shape.as_list())
+            print('before gather_nd x.shape:', x.shape.as_list())
+            x = tf.gather(x, x_indices, axis=0)
+            print('after gather_nd x.shape:', x.shape.as_list())
+    return x
+
+
+def build_C_global_layers(x,
+                          name,
+                          n_latents,
+                          start_idx,
+                          scope_idx,
+                          dlatents_withl_in,
+                          n_content,
+                          act,
+                          fused_modconv,
+                          fmaps=128,
+                          **kwargs):
+    '''
+    Build continuous latent layers, e.g. C_global layers.
+    '''
+    with tf.variable_scope(name + '-' + str(scope_idx)):
+        if n_content > 0:
+            with tf.variable_scope('Condition0'):
+                cond = apply_bias_act(dense_layer(
+                    dlatents_withl_in[:, :n_content], fmaps=128),
+                                      act=act)
+            with tf.variable_scope('Condition1'):
+                cond = apply_bias_act(dense_layer(cond, fmaps=n_latents),
+                                      act='sigmoid')
+        else:
+            cond = 1.
+        C_global_latents = dlatents_withl_in[:, start_idx:start_idx +
+                                             n_latents] * cond
+        x = apply_bias_act(modulated_conv2d_layer(x,
+                                                  C_global_latents,
+                                                  fmaps=fmaps,
+                                                  kernel=3,
+                                                  up=False,
+                                                  fused_modconv=fused_modconv),
+                           act=act)
+    return x
+
+
 def build_C_global_nocond_layers(x,
                                  name,
                                  n_latents,
@@ -505,16 +617,77 @@ def build_C_global_nocond_layers(x,
     with tf.variable_scope(name + '-' + str(scope_idx)):
         with tf.variable_scope('Conv0'):
             C_global_latents = apply_bias_act(dense_layer(
-                dlatents_withl_in[:, start_idx:start_idx + n_latents], fmaps=128),
-                                  act=act)
+                dlatents_withl_in[:, start_idx:start_idx + n_latents],
+                fmaps=128),
+                                              act=act)
         # C_global_latents = dlatents_withl_in[:, start_idx:start_idx +
-                                             # n_latents]
+        # n_latents]
         with tf.variable_scope('Modulate'):
-            x = apply_bias_act(modulated_conv2d_layer(x,
-                                                      C_global_latents,
-                                                      fmaps=fmaps,
-                                                      kernel=3,
-                                                      up=False,
-                                                      fused_modconv=fused_modconv),
+            x = apply_bias_act(modulated_conv2d_layer(
+                x,
+                C_global_latents,
+                fmaps=fmaps,
+                kernel=3,
+                up=False,
+                fused_modconv=fused_modconv),
+                               act=act)
+    return x
+
+
+def build_noise_layer(x,
+                      name,
+                      n_layers,
+                      scope_idx,
+                      act,
+                      use_noise,
+                      randomize_noise,
+                      fmaps=128,
+                      **kwargs):
+    for i in range(n_layers):
+        with tf.variable_scope(name + '-' + str(scope_idx) + '-' + str(i)):
+            x = conv2d_layer(x, fmaps=fmaps, kernel=3, up=False)
+            if use_noise:
+                if randomize_noise:
+                    noise = tf.random_normal(
+                        [tf.shape(x)[0], 1, x.shape[2], x.shape[3]],
+                        dtype=x.dtype)
+                else:
+                    # noise = tf.get_variable(
+                    # 'noise_variable-' + str(scope_idx) + '-' + str(i),
+                    # shape=[1, 1, x.shape[2], x.shape[3]],
+                    # initializer=tf.initializers.random_normal(),
+                    # trainable=False)
+                    noise_np = np.random.normal(size=(1, 1, x.shape[2],
+                                                      x.shape[3]))
+                    noise = tf.constant(noise_np)
+                    noise = tf.cast(noise, x.dtype)
+                noise_strength = tf.get_variable(
+                    'noise_strength-' + str(scope_idx) + '-' + str(i),
+                    shape=[],
+                    initializer=tf.initializers.zeros())
+                x += noise * tf.cast(noise_strength, x.dtype)
+            x = apply_bias_act(x, act=act)
+    return x
+
+
+def build_conv_layer(x,
+                     name,
+                     n_layers,
+                     scope_idx,
+                     act,
+                     resample_kernel,
+                     fmaps=128,
+                     **kwargs):
+    # e.g. {'Conv-up': 2}, {'Conv-id': 1}
+    sample_type = name.split('-')[-1]
+    assert sample_type in ['up', 'down', 'id']
+    for i in range(n_layers):
+        with tf.variable_scope(name + '-' + str(scope_idx) + '-' + str(i)):
+            x = apply_bias_act(conv2d_layer(x,
+                                            fmaps=fmaps,
+                                            kernel=3,
+                                            up=(sample_type == 'up'),
+                                            down=(sample_type == 'down'),
+                                            resample_kernel=resample_kernel),
                                act=act)
     return x

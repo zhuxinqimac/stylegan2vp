@@ -8,7 +8,7 @@
 
 # --- File Name: run_training_vc.py
 # --- Creation Date: 04-02-2020
-# --- Last Modified: Wed 04 Mar 2020 17:44:06 AEDT
+# --- Last Modified: Fri 13 Mar 2020 17:37:55 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -25,7 +25,7 @@ import dnnlib
 from dnnlib import EasyDict
 
 from metrics.metric_defaults import metric_defaults
-from training.spatial_biased_modular_networks import split_module_names, LATENT_MODULES
+from training.variation_consistency_networks import split_module_names, LATENT_MODULES
 
 #----------------------------------------------------------------------------
 
