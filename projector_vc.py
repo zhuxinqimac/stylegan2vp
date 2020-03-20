@@ -8,7 +8,7 @@
 
 # --- File Name: projector_vc.py
 # --- Creation Date: 12-02-2020
-# --- Last Modified: Thu 13 Feb 2020 03:00:06 AEDT
+# --- Last Modified: Fri 20 Mar 2020 15:47:43 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -87,7 +87,7 @@ class ProjectorVC(Projector):
             discrete_latents = tf.tile(discrete_latents, [self._minibatch_size, 1])
             self._dlatents_expr = tf.concat([discrete_latents, self._dlatents_expr], axis=1)
 
-        self._images_expr, _ = self._Gs.components.synthesis.get_output_for(self._dlatents_expr, randomize_noise=False)
+        self._images_expr = self._Gs.components.synthesis.get_output_for(self._dlatents_expr, randomize_noise=False)
 
         # Extend channels to 3
         if self._images_expr.shape.as_list()[1] == 1:

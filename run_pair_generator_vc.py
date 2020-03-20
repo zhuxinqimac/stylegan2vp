@@ -8,7 +8,7 @@
 
 # --- File Name: run_pair_generator_vc.py
 # --- Creation Date: 27-02-2020
-# --- Last Modified: Thu 05 Mar 2020 20:47:00 AEDT
+# --- Last Modified: Fri 20 Mar 2020 15:48:45 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -87,12 +87,12 @@ def generate_image_pairs(network_pkl,
             z_1 = np.concatenate((cat_onehot, z_1), axis=1)
             z_2 = np.concatenate((cat_onehot, z_2), axis=1)
 
-        fakes_1, _ = Gs.run(z_1,
+        fakes_1 = Gs.run(z_1,
                             grid_labels,
                             is_validation=True,
                             minibatch_size=batch_size,
                             **Gs_kwargs)
-        fakes_2, _ = Gs.run(z_2,
+        fakes_2 = Gs.run(z_2,
                             grid_labels,
                             is_validation=True,
                             minibatch_size=batch_size,

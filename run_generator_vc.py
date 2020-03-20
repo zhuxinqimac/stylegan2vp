@@ -8,7 +8,7 @@
 
 # --- File Name: run_generator_vc.py
 # --- Creation Date: 08-02-2020
-# --- Last Modified: Mon 02 Mar 2020 14:27:10 AEDT
+# --- Last Modified: Fri 20 Mar 2020 15:48:21 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -63,7 +63,7 @@ def generate_images(network_pkl,
 
         grid_size, grid_latents, grid_labels = get_grid_latents(
             n_discrete, n_continuous, n_samples_per, _G, grid_labels)
-        grid_fakes, _ = Gs.run(grid_latents,
+        grid_fakes = Gs.run(grid_latents,
                             grid_labels,
                             is_validation=True,
                             minibatch_size=4,
@@ -72,21 +72,6 @@ def generate_images(network_pkl,
                              dnnlib.make_run_dir_path('img_%04d.png' % idx),
                              drange=[-1, 1],
                              grid_size=grid_size)
-
-        # z = rnd.randn(1, *Gs.input_shapes[0][1:]) # [minibatch, component]
-        # z_tiled = np.tile(z, (100, 1))
-        # for dim in range(10):
-        # z_tiled[dim*10:dim*10+10, dim] = np.arange(-2, 2, 0.4)
-
-        # z_cls = np.zeros((1, *Gs.input_shapes[1][1:]))
-        # z_cls[0, rnd.randint(z_cls.shape[1])] = 1
-        # z_cls_tiled = np.tile(z_cls, (100, 1))
-
-        # tflib.set_vars({var: rnd.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
-        # # images = Gs.run(z, z_cls, **Gs_kwargs)[:, :, :, 0] # [minibatch, height, width, channel]
-        # images = Gs.run(z_tiled, z_cls_tiled, **Gs_kwargs)[:, :, :, 0] # [minibatch, height, width, channel]
-        # # PIL.Image.fromarray(images[0], 'L').save(dnnlib.make_run_dir_path('seed%04d.png' % seed))
-        # misc.save_image_grid(images, dnnlib.make_run_dir_path('seed%04d.png' % seed), drange=[0, 255], grid_size=(10, 10))
 
 
 #----------------------------------------------------------------------------

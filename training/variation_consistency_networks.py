@@ -8,7 +8,7 @@
 
 # --- File Name: variation_consistency_networks.py
 # --- Creation Date: 03-02-2020
-# --- Last Modified: Fri 13 Mar 2020 17:37:37 AEDT
+# --- Last Modified: Fri 20 Mar 2020 15:46:29 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -75,7 +75,7 @@ def G_main_vc(
     if 'lod' in components.synthesis.vars:
         deps.append(tf.assign(components.synthesis.vars['lod'], lod_in))
     with tf.control_dependencies(deps):
-        images_out, feat_map = components.synthesis.get_output_for(
+        images_out = components.synthesis.get_output_for(
             dlatents,
             is_training=is_training,
             force_clean_graph=is_template_graph,
@@ -84,8 +84,8 @@ def G_main_vc(
     # Return requested outputs.
     images_out = tf.identity(images_out, name='images_out')
     if return_dlatents:
-        return images_out, feat_map, dlatents
-    return images_out, feat_map
+        return images_out, dlatents
+    return images_out
 
 
 def G_mapping_spatial_biased_dsp(
@@ -202,8 +202,6 @@ def G_synthesis_vc_modular(
     # print('module_dict:', module_dict)
     # for scope_idx, k in enumerate(module_dict):
     for scope_idx, k in enumerate(key_ls):
-        if scope_idx == where_feat_map:
-            feat_map = x
         if (k.startswith('Label')) or (k.startswith('D_global')):
             # e.g. {'Label': 3}, {'D_global': 3}
             x = build_D_layers(x,
@@ -257,8 +255,7 @@ def G_synthesis_vc_modular(
     images_out = y
     assert images_out.dtype == tf.as_dtype(dtype)
     return tf.identity(images_out,
-                       name='images_out'), tf.identity(feat_map,
-                                                       name='feat_map')
+                       name='images_out')
 
 
 #----------------------------------------------------------------------------

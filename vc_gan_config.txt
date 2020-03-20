@@ -1,4 +1,0 @@
-CelebA: [Conv-up-1, C_global-14, Conv-id-1, Conv-id-1, Noise-2, Conv-up-1, Conv-id-1, Noise-2, Conv-up-1, Conv-id-1, Conv-id-1, Noise-2, Conv-id-1, Noise-2, Conv-up-1, Conv-id-1, Noise-2, Conv-id-1, Conv-id-1, Conv-up-1, Conv-id-1]
-Mnist: [D_global-10, Conv-up-1, C_global-6, Conv-id-1, Conv-id-1, Noise-2, Conv-up-1, Conv-id-1, Conv-id-1, Noise-2, Conv-up-1, Conv-id-1, Conv-id-1]
-Dsprites: [D_global-3, Conv-up-1, C_global-6, Conv-id-1, Conv-id-1, Conv-up-1, Conv-id-1, Conv-id-1, Conv-up-1, Conv-id-1, Conv-id-1, Conv-up-1, Conv-id-1]
-CelebA2: [Conv-up-1, C_global-10, Conv-id-2, Noise-2, Conv-up-1, C_global-10, Conv-id-1, Noise-2, Conv-up-1, C_global-5, Conv-id-2, Noise-2, Conv-id-1, Noise-2, Conv-up-1, C_global-5, Conv-id-1, Noise-2, Conv-id-2, Conv-up-1, Conv-id-1]
