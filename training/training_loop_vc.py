@@ -8,7 +8,7 @@
 
 # --- File Name: training_loop_vc.py
 # --- Creation Date: 04-02-2020
-# --- Last Modified: Mon 17 Feb 2020 17:13:59 AEDT
+# --- Last Modified: Fri 20 Mar 2020 16:20:10 AEDT
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -29,11 +29,41 @@ from training import dataset
 from training import misc
 from metrics import metric_base
 from training.training_loop import process_reals, training_schedule
-from training.training_loop_dsp import get_grid_latents
+
+#----------------------------------------------------------------------------
+# Get latents for grid traversal of continuous factors.
+
+def get_grid_latents(n_discrete, n_continuous, n_samples_per, G, grid_labels):
+    if n_discrete == 0:
+        n_discrete = 1  # 0 discrete means 1 discrete
+        real_has_discrete = False
+    else:
+        real_has_discrete = True
+    grid_size = (n_samples_per, n_continuous * n_discrete)
+    z = np.random.randn(1, n_continuous)  # [minibatch, component-3]
+    grid_latents = np.tile(z, (n_continuous * n_samples_per * n_discrete, 1))
+    for i in range(n_discrete):
+        for j in range(n_continuous):
+            grid_latents[(i * n_continuous + j) *
+                         n_samples_per:(i * n_continuous + j + 1) *
+                         n_samples_per, j] = np.arange(
+                             -2., 2., 4. / float(n_samples_per))
+    if real_has_discrete:
+        grid_discrete_ls = []
+        for i in range(n_discrete):
+            init_onehot = [0] * n_discrete
+            init_onehot[i] = 1
+            grid_discrete_ls.append(
+                np.tile(np.array([init_onehot], dtype=np.float32),
+                        (n_continuous * n_samples_per, 1)))
+        grid_discrete = np.concatenate(grid_discrete_ls, axis=0)
+        grid_latents = np.concatenate((grid_discrete, grid_latents), axis=1)
+    grid_labels = np.tile(grid_labels[:1],
+                          (n_discrete * n_continuous * n_samples_per, 1))
+    return grid_size, grid_latents, grid_labels
 
 #----------------------------------------------------------------------------
 # Main training script.
-
 
 def training_loop_vc(
         G_args={},  # Options for generator network.
@@ -164,7 +194,7 @@ def training_loop_vc(
     print('grid_latents.shape:', grid_latents.shape)
     print('grid_labels.shape:', grid_labels.shape)
     # pdb.set_trace()
-    grid_fakes, _ = Gs.run(grid_latents,
+    grid_fakes = Gs.run(grid_latents,
                         grid_labels,
                         is_validation=True,
                         minibatch_size=sched.minibatch_gpu,
@@ -475,7 +505,7 @@ def training_loop_vc(
             # Save snapshots.
             if image_snapshot_ticks is not None and (
                     cur_tick % image_snapshot_ticks == 0 or done):
-                grid_fakes, _ = Gs.run(grid_latents,
+                grid_fakes = Gs.run(grid_latents,
                                     grid_labels,
                                     is_validation=True,
                                     minibatch_size=sched.minibatch_gpu,
