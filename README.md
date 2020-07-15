@@ -35,6 +35,8 @@ sh train_run.sh
 ```
 
 You can modify this script to train different model variants.
+Note that for flag --data-dir you need to enter the parent directory path of
+the actual dataset, and use --dataset for the actual dataset directory name.
 
 ## Evaluation
 
