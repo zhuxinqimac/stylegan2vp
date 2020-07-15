@@ -53,3 +53,13 @@ Then use this repository https://github.com/zhuxinqimac/VP-metric-pytorch to
 get the VP score using the generated dataset.
 You should run multiple times (e.g. 3)
 of this evaluation procedure to obtain an averaged score for your model.
+
+## Citation
+```
+@inproceedings{VPdis_eccv20,
+author={Xinqi Zhu and Chang Xu and Dacheng Tao},
+title={Learning Disentangled Representations with Latent Variation Predictability},
+booktitle={ECCV},
+year={2020}
+}
+```
