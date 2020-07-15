@@ -8,7 +8,7 @@
 
 # --- File Name: run_training_vc.py
 # --- Creation Date: 04-02-2020
-# --- Last Modified: Fri 13 Mar 2020 17:37:55 AEDT
+# --- Last Modified: Wed 15 Jul 2020 00:33:00 AEST
 # --- Author: Xinqi Zhu
 # .<.<.<.<.<.<.<.<.<.<.<.<.<.<.<.<
 """
@@ -372,7 +372,7 @@ def main():
     parser.add_argument('--cls_alpha', help='Classification hyper in VC-GAN.',
                         metavar='CLS_ALPHA', default=0, type=float)
     parser.add_argument('--epsilon_loss', help='Continuous lambda for INFO-GAN and VC-GAN.',
-                        metavar='EPSILON_LOSS', default=0.4, type=float)
+                        metavar='EPSILON_LOSS', default=3, type=float)
     parser.add_argument('--where_feat_map', help='Which layer of feat map to use for F_loss.',
                         metavar='WHERE_FEAT_MAP', default=15, type=int)
     parser.add_argument('--latent_type', help='What type of latent priori to use.',
