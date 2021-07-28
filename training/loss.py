@@ -107,9 +107,9 @@ def calc_vc_loss(C_delta_latents, regress_out, D_global_size, C_global_size, D_l
     if delta_type == 'onedim':
         prob_C = tf.nn.softmax(regress_out[:, D_global_size:], axis=1)
         I_loss_C = C_delta_latents * tf.log(prob_C + 1e-12)
-        I_loss_C = C_lambda * I_loss_C
+        # I_loss_C = C_lambda * I_loss_C
 
-        I_loss_C = tf.reduce_sum(I_loss_C, axis=1)
+        I_loss_C = C_lambda * tf.reduce_sum(I_loss_C, axis=1)
         I_loss = - I_loss_C
     elif delta_type == 'fulldim':
         I_loss_C = tf.reduce_sum((tf.nn.sigmoid(regress_out[:, D_global_size:]) - C_delta_latents) ** 2, axis=1)
